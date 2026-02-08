@@ -1,0 +1,110 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  id-token: write # Workload Identity Federation に必須
+
+concurrency:
+  group: deploy-cloud-run-main
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Build & Deploy (skip if secrets missing)
+    runs-on: ubuntu-latest
+
+    # Secrets から注入（未設定なら空）
+    env:
+      GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+      GCP_REGION: ${{ secrets.GCP_REGION }}
+      GCP_WORKLOAD_ID_PROVIDER: ${{ secrets.GCP_WORKLOAD_ID_PROVIDER }}
+      GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+      AR_REPOSITORY: ${{ secrets.AR_REPOSITORY }}
+      CLOUD_RUN_SERVICE: ${{ secrets.CLOUD_RUN_SERVICE }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # シークレットチェック (無ければスキップ)
+      - name: Check required secrets
+        id: secrets_check
+        shell: bash
+        run: |
+          missing=()
+
+          [ -z "${GCP_PROJECT_ID}" ] && missing+=("GCP_PROJECT_ID")
+          [ -z "${GCP_REGION}" ] && missing+=("GCP_REGION")
+          [ -z "${GCP_WORKLOAD_ID_PROVIDER}" ] && missing+=("GCP_WORKLOAD_ID_PROVIDER")
+          [ -z "${GCP_SERVICE_ACCOUNT}" ] && missing+=("GCP_SERVICE_ACCOUNT")
+          [ -z "${AR_REPOSITORY}" ] && missing+=("AR_REPOSITORY")
+          [ -z "${CLOUD_RUN_SERVICE}" ] && missing+=("CLOUD_RUN_SERVICE")
+
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::warning title=Deploy skipped::Missing secrets: ${missing[*]}"
+            echo "should_deploy=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "should_deploy=true" >> "$GITHUB_OUTPUT"
+
+      # GCP ログイン (Workload Identity Federation)
+      - name: Authenticate to Google Cloud
+        if: steps.secrets_check.outputs.should_deploy == 'true'
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_ID_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up gcloud
+        if: steps.secrets_check.outputs.should_deploy == 'true'
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      # Artifact Registry 用の Docker 設定
+      - name: Configure Docker for Artifact Registry
+        if: steps.secrets_check.outputs.should_deploy == 'true'
+        shell: bash
+        run: |
+          gcloud auth configure-docker "${GCP_REGION}-docker.pkg.dev" --quiet
+
+      # Docker image ビルド
+      - name: Build Docker image
+        if: steps.secrets_check.outputs.should_deploy == 'true'
+        shell: bash
+        run: |
+          docker build -t laravel-workflow-demo .
+
+      # Docker image プッシュ & タグ付け
+      - name: Tag & Push Docker image
+        if: steps.secrets_check.outputs.should_deploy == 'true'
+        shell: bash
+        run: |
+          IMAGE="${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${AR_REPOSITORY}/laravel-workflow-demo"
+          SHA_TAG="${IMAGE}:${GITHUB_SHA}"
+          LATEST_TAG="${IMAGE}:latest"
+
+          docker tag laravel-workflow-demo "${SHA_TAG}"
+          docker tag laravel-workflow-demo "${LATEST_TAG}"
+
+          docker push "${SHA_TAG}"
+          docker push "${LATEST_TAG}"
+
+          echo "IMAGE_SHA=${SHA_TAG}" >> $GITHUB_ENV
+
+      # Deploy
+      - name: Deploy to Cloud Run
+        if: steps.secrets_check.outputs.should_deploy == 'true'
+        shell: bash
+        run: |
+          gcloud run deploy "${CLOUD_RUN_SERVICE}" \
+            --image "${IMAGE_SHA}" \
+            --region "${GCP_REGION}" \
+            --platform managed \
+            --quiet
