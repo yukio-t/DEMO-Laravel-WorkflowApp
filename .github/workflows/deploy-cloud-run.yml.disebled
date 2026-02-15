@@ -79,7 +79,7 @@ jobs:
         if: steps.secrets_check.outputs.should_deploy == 'true'
         shell: bash
         run: |
-          docker build -t laravel-workflow-demo .
+          docker build --target=prod -t laravel-workflow-demo .
 
       # Docker image プッシュ & タグ付け
       - name: Tag & Push Docker image

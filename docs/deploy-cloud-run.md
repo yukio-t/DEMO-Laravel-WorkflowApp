@@ -39,7 +39,7 @@ gcloud artifacts repositories create laravel-workflow \
 PROJECT_ID=$(gcloud config get-value project)
 IMAGE="asia-northeast1-docker.pkg.dev/${PROJECT_ID}/laravel-workflow/laravel-workflow-demo:latest"
 
-docker build -t laravel-workflow-demo .
+docker build --target=prod -t laravel-workflow-demo .
 docker tag laravel-workflow-demo "${IMAGE}"
 ```
 
