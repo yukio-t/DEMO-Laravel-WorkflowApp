@@ -1,11 +1,17 @@
 .git
 .github
-node_modules
-vendor
-storage
-bootstrap/cache
-tests
+
+# Laravel 配下の不要物
+src/node_modules
+src/vendor
+src/storage
+src/bootstrap/cache
+src/tests
+
+# docsなど
 docs
 *.md
-.env
-.env.*
+
+# env
+src/.env
+src/.env.*

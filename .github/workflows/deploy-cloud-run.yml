@@ -27,6 +27,10 @@ jobs:
       AR_REPOSITORY: ${{ secrets.AR_REPOSITORY }}
       CLOUD_RUN_SERVICE: ${{ secrets.CLOUD_RUN_SERVICE }}
 
+      # DHI pull 用（dhi.io が認証必須の場合に必要）
+      DHI_USERNAME: ${{ secrets.DHI_USERNAME }}
+      DHI_TOKEN: ${{ secrets.DHI_TOKEN }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -45,41 +49,49 @@ jobs:
           [ -z "${AR_REPOSITORY}" ] && missing+=("AR_REPOSITORY")
           [ -z "${CLOUD_RUN_SERVICE}" ] && missing+=("CLOUD_RUN_SERVICE")
 
-          if [ ${#missing[@]} -gt 0 ]; then
-            echo "::warning title=Deploy skipped::Missing secrets: ${missing[*]}"
-            echo "should_deploy=false" >> "$GITHUB_OUTPUT"
-            exit 0
+          if [ ${#missing[@]} -ne 0 ]; then
+            echo "should_deploy=false" >> $GITHUB_OUTPUT
+            echo "Missing secrets: ${missing[*]}"
+          else
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
           fi
 
-          echo "should_deploy=true" >> "$GITHUB_OUTPUT"
+      # DHI ログイン
+      - name: Docker login (dhi.io)
+        if: steps.secrets_check.outputs.should_deploy == 'true' && env.DHI_USERNAME != '' && env.DHI_TOKEN != ''
+        shell: bash
+        run: |
+          echo "${DHI_TOKEN}" | docker login dhi.io -u "${DHI_USERNAME}" --password-stdin
 
       # GCP ログイン (Workload Identity Federation)
-      - name: Authenticate to Google Cloud
+      - name: Authenticate to Google Cloud (WIF)
         if: steps.secrets_check.outputs.should_deploy == 'true'
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_ID_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
-      - name: Set up gcloud
+      - name: Setup gcloud
         if: steps.secrets_check.outputs.should_deploy == 'true'
         uses: google-github-actions/setup-gcloud@v2
-        with:
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
 
-      # Artifact Registry 用の Docker 設定
-      - name: Configure Docker for Artifact Registry
+      # Artifact Registry 用の Docker 認証
+      - name: Configure docker for Artifact Registry
         if: steps.secrets_check.outputs.should_deploy == 'true'
         shell: bash
         run: |
           gcloud auth configure-docker "${GCP_REGION}-docker.pkg.dev" --quiet
 
       # Docker image ビルド
-      - name: Build Docker image
+      - name: Build Docker image (prod target)
         if: steps.secrets_check.outputs.should_deploy == 'true'
         shell: bash
         run: |
-          docker build --target=prod -t laravel-workflow-demo .
+          docker build \
+            --platform=linux/amd64 \
+            --target=prod \
+            -t laravel-workflow-demo:prod \
+            .
 
       # Docker image プッシュ & タグ付け
       - name: Tag & Push Docker image
@@ -90,8 +102,9 @@ jobs:
           SHA_TAG="${IMAGE}:${GITHUB_SHA}"
           LATEST_TAG="${IMAGE}:latest"
 
-          docker tag laravel-workflow-demo "${SHA_TAG}"
-          docker tag laravel-workflow-demo "${LATEST_TAG}"
+          # tag 元は :prod
+          docker tag laravel-workflow-demo:prod "${SHA_TAG}"
+          docker tag laravel-workflow-demo:prod "${LATEST_TAG}"
 
           docker push "${SHA_TAG}"
           docker push "${LATEST_TAG}"
