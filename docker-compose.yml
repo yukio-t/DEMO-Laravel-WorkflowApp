@@ -1,0 +1,14 @@
+services:
+  app:
+    container_name: laravel-workflow-demo
+    image: laravel-workflow-demo:dev
+    ports:
+      - "8080:8080"
+    env_file:
+      - src/.env
+    volumes:
+      - ./src:/app
+      - ./src/storage:/app/storage
+      - ./src/bootstrap/cache:/app/bootstrap/cache
+      - ./src/database:/app/database
+    command: ["php", "-S", "0.0.0.0:8080", "-t", "public"]
