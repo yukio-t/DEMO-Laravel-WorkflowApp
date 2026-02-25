@@ -17,6 +17,12 @@
                 </div>
             @endif
 
+            @if ($errors->has('transition'))
+                <div class="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded">
+                    {{ $errors->first('transition') }}
+                </div>
+            @endif
+
             <div class="bg-white shadow-sm sm:rounded-lg p-6">
                 <div class="text-sm text-gray-500 mb-2">Public ID</div>
                 <div class="font-mono">{{ $workflow->public_id }}</div>
@@ -65,17 +71,21 @@
                             </button>
                         </form>
                     @endcan
+                </div>
 
                     @can('reject', $workflow)
                         <form method="POST" action="{{ route('workflows.reject', $workflow) }}">
                             @csrf
-                            <input class="border rounded px-2 py-2" type="text" name="comment" placeholder="Reject comment (optional)" />
-                            <button class="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700" type="submit">
-                                Reject
-                            </button>
+                            <div class="mt-4">
+                                <input class="border rounded px-2 py-2 w-full" type="text" name="comment" placeholder="Reject comment (optional)" />
+                            </div>
+                            <div class="mt-4">
+                                <button class="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700" type="submit">
+                                    Reject
+                                </button>
+                            </div>
                         </form>
                     @endcan
-                </div>
             </div>
 
             <div class="bg-white shadow-sm sm:rounded-lg p-6">

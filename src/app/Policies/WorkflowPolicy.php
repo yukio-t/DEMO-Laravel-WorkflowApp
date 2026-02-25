@@ -22,12 +22,11 @@ class WorkflowPolicy
      */
     public function view(User $user, Workflow $workflow): bool
     {
+        // admin は全て
         if ($user->role === 'admin') return true;
 
-        if ($user->role === 'approver') {
-            // approver は submitted のみ閲覧可
-            return $workflow->current_state === 'submitted';
-        }
+        // approver は閲覧制限
+        if ($user->role === 'approver') return in_array($workflow->current_state, ['submitted', 'approved', 'rejected'], true);
 
         // applicant は自分のものだけ
         return $workflow->created_by === $user->id;
@@ -43,9 +42,10 @@ class WorkflowPolicy
 
     public function submit(User $user, Workflow $workflow): bool
     {
-        // applicant は自分の draft のみ提出可
+        // admin は全て
         if ($user->role === 'admin') return true;
 
+        // applicant は自分の draft のみ提出可
         return $user->role === 'applicant'
             && $workflow->created_by === $user->id
             && $workflow->current_state === 'draft';
@@ -53,8 +53,10 @@ class WorkflowPolicy
 
     public function approve(User $user, Workflow $workflow): bool
     {
+        // admin は全て
         if ($user->role === 'admin') return true;
 
+        // approver は可
         return $user->role === 'approver'
             && $workflow->current_state === 'submitted';
     }
