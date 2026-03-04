@@ -6,53 +6,51 @@ use App\Models\User;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
-use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
 
 class EmailVerificationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_email_verification_screen_can_be_rendered(): void
+    public function test_email_verification_screen_is_not_available(): void
     {
         $user = User::factory()->unverified()->create();
 
-        $response = $this->actingAs($user)->get('/verify-email');
-
-        $response->assertStatus(200);
+        $this->actingAs($user)
+            ->get('/verify-email')
+            ->assertNotFound();
     }
 
-    public function test_email_can_be_verified(): void
+    public function test_email_verification_endpoint_is_not_available(): void
     {
         $user = User::factory()->unverified()->create();
 
-        Event::fake();
+        Event::fake([Verified::class]);
 
-        $verificationUrl = URL::temporarySignedRoute(
-            'verification.verify',
-            now()->addMinutes(60),
-            ['id' => $user->id, 'hash' => sha1($user->email)]
-        );
+        // Breeze/Jetstream の典型パス（このデモでは塞ぐ前提）
+        $path = '/email/verify/'.$user->id.'/'.sha1($user->email);
 
-        $response = $this->actingAs($user)->get($verificationUrl);
+        $this->actingAs($user)
+            ->get($path)
+            ->assertNotFound();
 
-        Event::assertDispatched(Verified::class);
-        $this->assertTrue($user->fresh()->hasVerifiedEmail());
-        $response->assertRedirect(route('dashboard', absolute: false).'?verified=1');
+        Event::assertNotDispatched(Verified::class);
+        $this->assertFalse($user->fresh()->hasVerifiedEmail());
     }
 
-    public function test_email_is_not_verified_with_invalid_hash(): void
+    public function test_email_is_not_verified_with_invalid_hash_even_if_endpoint_is_hit(): void
     {
         $user = User::factory()->unverified()->create();
 
-        $verificationUrl = URL::temporarySignedRoute(
-            'verification.verify',
-            now()->addMinutes(60),
-            ['id' => $user->id, 'hash' => sha1('wrong-email')]
-        );
+        Event::fake([Verified::class]);
 
-        $this->actingAs($user)->get($verificationUrl);
+        $path = '/email/verify/'.$user->id.'/'.sha1('wrong-email');
 
+        $this->actingAs($user)
+            ->get($path)
+            ->assertNotFound();
+
+        Event::assertNotDispatched(Verified::class);
         $this->assertFalse($user->fresh()->hasVerifiedEmail());
     }
 }
