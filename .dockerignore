@@ -6,7 +6,6 @@ src/node_modules
 src/vendor
 src/storage
 src/bootstrap/cache
-src/tests
 
 # docsなど
 docs
