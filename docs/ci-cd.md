@@ -48,6 +48,8 @@ DHI　認証：
 - Docker build（`--platform=linux/amd64` / `--target=prod`）
 - Artifact Registry へ push（SHA / latest）
 - Cloud Run へ deploy（private 前提）
+- tests（dev-local で build → `php artisan test`）
+- deploy は `needs: tests`（テスト失敗時は deploy しない）
 
 ---
 
@@ -110,11 +112,13 @@ DHI を採用しているため、CI では以下を意識します。
 ## 9. ymlに落とし込み
 
 このドキュメントに基づき、以下のように作成
-
+- .github/workflows/ci.yml
+  - PR / push で **Docker（dev-local）でテストのみ実行**
+  - deploy は行わない（CD は `deploy-cloud-run.yml` に限定）
 - .github/workflows/deploy-cloud-run.yml
-    - Secrets が無ければスキップ
-    - Artifact Registry push
-    - Cloud Run deploy
+  - Secrets が無ければスキップ
+  - Artifact Registry push
+  - Cloud Run deploy
 
 ---
 
