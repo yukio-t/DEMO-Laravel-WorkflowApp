@@ -48,6 +48,8 @@ jobs:
           [ -z "${GCP_SERVICE_ACCOUNT}" ] && missing+=("GCP_SERVICE_ACCOUNT")
           [ -z "${AR_REPOSITORY}" ] && missing+=("AR_REPOSITORY")
           [ -z "${CLOUD_RUN_SERVICE}" ] && missing+=("CLOUD_RUN_SERVICE")
+          [ -z "${DHI_USERNAME}" ] && missing+=("DHI_USERNAME")
+          [ -z "${DHI_TOKEN}" ] && missing+=("DHI_TOKEN")
 
           if [ ${#missing[@]} -ne 0 ]; then
             echo "should_deploy=false" >> $GITHUB_OUTPUT
@@ -117,6 +119,7 @@ jobs:
         shell: bash
         run: |
           gcloud run deploy "${CLOUD_RUN_SERVICE}" \
+            --project "${GCP_PROJECT_ID}" \
             --image "${IMAGE_SHA}" \
             --region "${GCP_REGION}" \
             --platform managed \
