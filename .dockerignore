@@ -1,0 +1,16 @@
+.git
+.github
+
+# Laravel 配下の不要物
+src/node_modules
+src/vendor
+src/storage
+src/bootstrap/cache
+
+# docsなど
+docs
+*.md
+
+# env
+src/.env
+src/.env.*
