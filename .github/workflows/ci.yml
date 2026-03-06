@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - dev
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Run tests (Docker)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build test image (dev-local)
+        shell: bash
+        run: |
+          docker build \
+            --target=dev-local \
+            -t laravel-workflow-demo:test \
+            .
+
+      - name: Run PHPUnit (artisan test)
+        shell: bash
+        run: |
+          docker run --rm \
+            -e APP_ENV=testing \
+            -e APP_DEBUG=false \
+            -e DB_CONNECTION=sqlite \
+            -e DB_DATABASE=":memory:" \
+            -e LOG_CHANNEL=stderr \
+            laravel-workflow-demo:test \
+            bash -lc "echo 'APP_ENV=testing' > .env && \
+                      echo 'APP_DEBUG=false' >> .env && \
+                      echo 'APP_KEY=base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=' >> .env && \
+                      echo 'DB_CONNECTION=sqlite' >> .env && \
+                      echo 'DB_DATABASE=:memory:' >> .env && \
+                      php artisan test"
