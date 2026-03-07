@@ -68,7 +68,6 @@ RUN npm run build
 FROM dev-local AS dev-local-assets
 COPY --from=frontend_local /work/public/build /app/public/build
 
-
 # =========================================================
 # Prod build (deps): vendor without dev
 #  - prod 実行イメージ(dhi)には composer が無い想定なので、
@@ -92,7 +91,8 @@ WORKDIR /app
 ENV APP_ENV=production \
     APP_DEBUG=false \
     LOG_CHANNEL=stderr \
-    DB_CONNECTION=sqlite
+    DB_CONNECTION=sqlite \
+    DB_DATABASE=/app/database/database.sqlite
 
 COPY --from=vendor_prod /app/vendor ./vendor
 COPY src/ ./
@@ -103,8 +103,8 @@ RUN mkdir -p \
       storage/framework/views \
       storage/logs \
       bootstrap/cache \
-      database
-
+      database \
+  && touch database/database.sqlite
 
 # =========================================================
 # Prod (Cloud Run): DHI non-dev
@@ -117,7 +117,8 @@ WORKDIR /app
 ENV APP_ENV=production \
     APP_DEBUG=false \
     LOG_CHANNEL=stderr \
-    DB_CONNECTION=sqlite
+    DB_CONNECTION=sqlite \
+    DB_DATABASE=/app/database/database.sqlite
 
 COPY --from=build_prod /app /app
 

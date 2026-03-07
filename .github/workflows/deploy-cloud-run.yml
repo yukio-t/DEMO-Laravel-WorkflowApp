@@ -123,6 +123,6 @@ jobs:
             --image "${IMAGE_SHA}" \
             --region "${GCP_REGION}" \
             --platform managed \
-            --set-env-vars APP_ENV=production,APP_DEBUG=false,LOG_CHANNEL=stderr,DB_CONNECTION=sqlite \
+            --set-env-vars APP_ENV=production,APP_DEBUG=false,LOG_CHANNEL=stderr,DB_CONNECTION=sqlite,DB_DATABASE=/app/database/database.sqlite \
             --set-secrets APP_KEY=APP_KEY:latest \
             --quiet
