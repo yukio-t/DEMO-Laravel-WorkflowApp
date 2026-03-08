@@ -75,6 +75,17 @@ COPY --from=frontend_local /work/public/build /app/public/build
 #    依存解決は別ステージで完結させて COPY する
 # =========================================================
 
+FROM node:22-bookworm AS frontend_build
+WORKDIR /work
+COPY src/package.json src/package-lock.json ./
+RUN npm ci
+COPY src/resources ./resources
+COPY src/vite.config.* ./
+COPY src/public ./public
+# Tailwind導入済みなら必要に応じて
+# COPY src/tailwind.config.* src/postcss.config.* ./
+RUN npm run build
+
 FROM composer:2 AS vendor_prod
 WORKDIR /app
 COPY src/composer.json src/composer.lock ./
@@ -98,6 +109,7 @@ ENV APP_ENV=production \
 
 COPY --from=vendor_prod /app/vendor ./vendor
 COPY src/ ./
+COPY --from=frontend_build /work/public/build ./public/build
 
 RUN mkdir -p \
       storage/framework/cache \
