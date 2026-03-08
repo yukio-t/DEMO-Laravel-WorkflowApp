@@ -104,6 +104,22 @@ jobs:
 
           echo "=== php version ==="
           docker run --rm laravel-workflow-demo:prod -v
+
+      - name: Debug prod runtime user
+        if: steps.secrets_check.outputs.should_deploy == 'true'
+        shell: bash
+        run: |
+          echo "=== image config ==="
+          docker image inspect laravel-workflow-demo:prod --format='Entrypoint={{json .Config.Entrypoint}} Cmd={{json .Config.Cmd}} User={{json .Config.User}} WorkingDir={{json .Config.WorkingDir}}'
+
+          echo "=== php version ==="
+          docker run --rm laravel-workflow-demo:prod -v
+
+          echo "=== passwd entry for nonroot ==="
+          docker run --rm laravel-workflow-demo:prod -r 'foreach (file("/etc/passwd") as $line) { if (str_starts_with($line, "nonroot:")) echo $line; }'
+
+          echo "=== runtime uid/gid ==="
+          docker run --rm laravel-workflow-demo:prod -r 'echo "uid=" . (function_exists("posix_geteuid") ? posix_geteuid() : "n/a") . PHP_EOL; echo "gid=" . (function_exists("posix_getegid") ? posix_getegid() : "n/a") . PHP_EOL;'
       
       - name: Smoke test prod container
         if: steps.secrets_check.outputs.should_deploy == 'true'
