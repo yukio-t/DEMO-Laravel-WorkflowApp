@@ -126,4 +126,4 @@ ENV APP_ENV=production \
 COPY --from=build_prod /app /app
 
 EXPOSE 8080
-CMD ["php", "-S", "0.0.0.0:8080", "-t", "public"]
+CMD ["-S", "0.0.0.0:8080", "-t", "public"]
