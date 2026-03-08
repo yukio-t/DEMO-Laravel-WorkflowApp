@@ -112,12 +112,18 @@ jobs:
 
           sleep 5
 
-          curl -fsS http://127.0.0.1:8080 > /dev/null || (
-            docker logs laravel-workflow-smoke
+          if ! curl -fsS http://127.0.0.1:8080 > /dev/null; then
+            echo "=== docker ps -a ==="
+            docker ps -a
+            echo "=== docker logs ==="
+            docker logs laravel-workflow-smoke || true
+            echo "=== docker inspect ==="
+            docker inspect laravel-workflow-smoke || true
             exit 1
-          )
+          fi
 
           docker stop laravel-workflow-smoke
+          docker rm -f laravel-workflow-smoke || true
 
       # Docker image プッシュ & タグ付け
       - name: Tag & Push Docker image
