@@ -94,12 +94,22 @@ jobs:
             --target=prod \
             -t laravel-workflow-demo:prod \
             .
+
+      - name: Debug prod image command
+        if: steps.secrets_check.outputs.should_deploy == 'true'
+        shell: bash
+        run: |
+          echo "=== image config ==="
+          docker image inspect laravel-workflow-demo:prod --format='Entrypoint={{json .Config.Entrypoint}} Cmd={{json .Config.Cmd}} User={{json .Config.User}} WorkingDir={{json .Config.WorkingDir}}'
+
+          echo "=== php -v ==="
+          docker run --rm laravel-workflow-demo:prod php -v
       
       - name: Smoke test prod container
         if: steps.secrets_check.outputs.should_deploy == 'true'
         shell: bash
         run: |
-          docker run -d --rm \
+          docker create \
             --name laravel-workflow-smoke \
             -p 8080:8080 \
             -e APP_ENV=production \
@@ -110,19 +120,20 @@ jobs:
             -e DB_DATABASE=/app/database/database.sqlite \
             laravel-workflow-demo:prod
 
+          docker start laravel-workflow-smoke || true
           sleep 5
 
-          if ! curl -fsS http://127.0.0.1:8080 > /dev/null; then
-            echo "=== docker ps -a ==="
-            docker ps -a
-            echo "=== docker logs ==="
-            docker logs laravel-workflow-smoke || true
-            echo "=== docker inspect ==="
-            docker inspect laravel-workflow-smoke || true
-            exit 1
-          fi
+          echo "=== docker ps -a ==="
+          docker ps -a
 
-          docker stop laravel-workflow-smoke
+          echo "=== docker inspect state ==="
+          docker inspect laravel-workflow-smoke --format='status={{.State.Status}} exit={{.State.ExitCode}} error={{.State.Error}} started={{.State.StartedAt}} finished={{.State.FinishedAt}}' || true
+
+          echo "=== docker logs ==="
+          docker logs laravel-workflow-smoke || true
+
+          curl -fsS http://127.0.0.1:8080 > /dev/null
+
           docker rm -f laravel-workflow-smoke || true
 
       # Docker image プッシュ & タグ付け
