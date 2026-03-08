@@ -30,7 +30,8 @@ RUN mkdir -p \
       storage/framework/views \
       storage/logs \
       bootstrap/cache \
-      database
+      database \
+ && touch database/database.sqlite
 
 EXPOSE 8080
 
@@ -91,8 +92,7 @@ WORKDIR /app
 ENV APP_ENV=production \
     APP_DEBUG=false \
     LOG_CHANNEL=stderr \
-    DB_CONNECTION=sqlite \
-    DB_DATABASE=/app/database/database.sqlite
+    DB_CONNECTION=sqlite
 
 COPY --from=vendor_prod /app/vendor ./vendor
 COPY src/ ./
@@ -111,7 +111,7 @@ RUN mkdir -p \
 # ※ローカル実行はしない前提（DHI PHP をローカルで動かせない環境があるため）
 # =========================================================
 
-FROM dhi.io/php:8.5.0-debian13 AS prod
+FROM php:8.4-cli-bookworm AS prod
 WORKDIR /app
 
 ENV APP_ENV=production \
