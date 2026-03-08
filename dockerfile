@@ -83,7 +83,7 @@ COPY src/resources ./resources
 COPY src/vite.config.* ./
 COPY src/public ./public
 # Tailwind導入済みなら必要に応じて
-# COPY src/tailwind.config.* src/postcss.config.* ./
+COPY src/tailwind.config.* src/postcss.config.* ./
 RUN npm run build
 
 FROM composer:2 AS vendor_prod
@@ -112,14 +112,15 @@ COPY src/ ./
 COPY --from=frontend_build /work/public/build ./public/build
 
 RUN mkdir -p \
-      storage/framework/cache \
-      storage/framework/sessions \
-      storage/framework/views \
-      storage/logs \
-      bootstrap/cache \
-      database \
-  && touch database/database.sqlite \
-  && php artisan migrate --force 
+    storage/framework/cache \
+    storage/framework/sessions \
+    storage/framework/views \
+    storage/logs \
+    bootstrap/cache \
+    database \
+    && touch database/database.sqlite \
+    && php artisan migrate --force \
+    && php artisan db:seed --force
 
 # =========================================================
 # Prod (Cloud Run): DHI non-dev
