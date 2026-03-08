@@ -107,7 +107,9 @@ RUN mkdir -p \
       bootstrap/cache \
       database \
   && touch database/database.sqlite \
-  && php artisan migrate --force
+  && php artisan migrate --force \
+  && chmod -R 775 storage bootstrap/cache database \
+  && chmod 664 database/database.sqlite
 
 # =========================================================
 # Prod (Cloud Run): DHI non-dev
