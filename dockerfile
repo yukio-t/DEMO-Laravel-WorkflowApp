@@ -114,7 +114,7 @@ RUN mkdir -p \
 # ※ローカル実行はしない前提（DHI PHP をローカルで動かせない環境があるため）
 # =========================================================
 
-FROM php:8.4-cli-bookworm AS prod
+FROM dhi.io/php:8.4-debian13 AS prod
 WORKDIR /app
 
 ENV APP_ENV=production \
