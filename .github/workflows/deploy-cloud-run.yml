@@ -94,6 +94,30 @@ jobs:
             --target=prod \
             -t laravel-workflow-demo:prod \
             .
+      
+      - name: Smoke test prod container
+        if: steps.secrets_check.outputs.should_deploy == 'true'
+        shell: bash
+        run: |
+          docker run -d --rm \
+            --name laravel-workflow-smoke \
+            -p 8080:8080 \
+            -e APP_ENV=production \
+            -e APP_DEBUG=false \
+            -e APP_KEY=base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= \
+            -e LOG_CHANNEL=stderr \
+            -e DB_CONNECTION=sqlite \
+            -e DB_DATABASE=/app/database/database.sqlite \
+            laravel-workflow-demo:prod
+
+          sleep 5
+
+          curl -fsS http://127.0.0.1:8080 > /dev/null || (
+            docker logs laravel-workflow-smoke
+            exit 1
+          )
+
+          docker stop laravel-workflow-smoke
 
       # Docker image プッシュ & タグ付け
       - name: Tag & Push Docker image
