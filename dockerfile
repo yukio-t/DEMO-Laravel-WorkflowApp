@@ -107,9 +107,7 @@ RUN mkdir -p \
       bootstrap/cache \
       database \
   && touch database/database.sqlite \
-  && php artisan migrate --force \
-  && chmod -R 775 storage bootstrap/cache database \
-  && chmod 664 database/database.sqlite
+  && php artisan migrate --force 
 
 # =========================================================
 # Prod (Cloud Run): DHI non-dev
@@ -125,7 +123,7 @@ ENV APP_ENV=production \
     DB_CONNECTION=sqlite \
     DB_DATABASE=/app/database/database.sqlite
 
-COPY --from=build_prod /app /app
+COPY --from=build_prod --chown=65532:65532 /app /app
 
 EXPOSE 8080
 CMD ["-S", "0.0.0.0:8080", "-t", "public"]
