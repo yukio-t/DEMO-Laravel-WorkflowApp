@@ -92,7 +92,9 @@ WORKDIR /app
 ENV APP_ENV=production \
     APP_DEBUG=false \
     LOG_CHANNEL=stderr \
-    DB_CONNECTION=sqlite
+    DB_CONNECTION=sqlite \
+    DB_DATABASE=/app/database/database.sqlite \
+    APP_KEY=base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
 
 COPY --from=vendor_prod /app/vendor ./vendor
 COPY src/ ./
@@ -104,7 +106,8 @@ RUN mkdir -p \
       storage/logs \
       bootstrap/cache \
       database \
-  && touch database/database.sqlite
+  && touch database/database.sqlite \
+  && php artisan migrate --force
 
 # =========================================================
 # Prod (Cloud Run): DHI non-dev
